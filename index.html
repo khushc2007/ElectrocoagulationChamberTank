@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WATER·IQ — 3D Treatment System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=DM+Sans:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #04080f;
+      --panel-bg: rgba(4,12,24,0.85);
+      --accent: #00c8ff;
+      --accent2: #00ff9d;
+      --warn: #ff6b35;
+      --text: rgba(255,255,255,0.85);
+      --muted: rgba(255,255,255,0.3);
+      --border: rgba(0,200,255,0.12);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg);
+      overflow: hidden;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text);
+      cursor: default;
+    }
+    #canvas-container {
+      position: fixed; inset: 0;
+    }
+    canvas { display: block; width: 100% !important; height: 100% !important; }
+
+    /* ---- TOP BAR ---- */
+    #topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px;
+      background: linear-gradient(180deg, rgba(4,8,15,0.95) 0%, transparent 100%);
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-text {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px; letter-spacing: 0.12em;
+      color: #fff;
+    }
+    .logo-text span { color: var(--accent); }
+    .topbar-center {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; letter-spacing: 0.35em;
+      color: var(--muted); text-transform: uppercase;
+    }
+    .topbar-right {
+      display: flex; gap: 20px; align-items: center;
+    }
+    .tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; letter-spacing: 0.2em;
+      color: var(--accent); text-transform: uppercase;
+      border: 1px solid rgba(0,200,255,0.2);
+      padding: 4px 10px; border-radius: 2px;
+    }
+
+    /* ---- LEFT STAGE PANEL ---- */
+    #stage-panel {
+      position: fixed; left: 24px; top: 72px; bottom: 24px;
+      width: 220px; z-index: 100;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .stage-btn {
+      background: rgba(4,12,28,0.7);
+      border: 1px solid var(--border);
+      border-left: 2px solid transparent;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(12px);
+      border-radius: 3px;
+    }
+    .stage-btn:hover {
+      background: rgba(0,100,200,0.12);
+      border-left-color: var(--accent);
+      border-color: rgba(0,200,255,0.25);
+    }
+    .stage-btn.expanded {
+      background: rgba(0,80,160,0.2);
+      border-left-color: var(--accent);
+      border-color: rgba(0,200,255,0.35);
+    }
+    .stage-btn.expanded .snum { color: var(--accent); }
+    .snum {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; color: var(--muted);
+      letter-spacing: 0.2em; margin-bottom: 2px;
+    }
+    .sname {
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.05em; color: var(--text);
+      text-transform: uppercase;
+    }
+    .sdesc {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; color: var(--muted);
+      margin-top: 2px; line-height: 1.5;
+    }
+    .expand-indicator {
+      float: right; font-size: 10px;
+      color: var(--muted); margin-top: -18px;
+      transition: transform 0.3s;
+    }
+    .stage-btn.expanded .expand-indicator { transform: rotate(45deg); color: var(--accent); }
+
+    /* ---- RIGHT INFO PANEL ---- */
+    #info-panel {
+      position: fixed; right: 24px; top: 72px;
+      width: 280px; z-index: 100;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      backdrop-filter: blur(20px);
+      padding: 20px;
+      opacity: 0; transform: translateX(20px);
+      transition: opacity 0.35s, transform 0.35s;
+      pointer-events: none;
+    }
+    #info-panel.visible { opacity: 1; transform: translateX(0); pointer-events: all; }
+    .info-tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; letter-spacing: 0.3em;
+      color: var(--accent); text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .info-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px; letter-spacing: 0.08em;
+      color: #fff; line-height: 1; margin-bottom: 12px;
+    }
+    .info-divider {
+      height: 1px; background: var(--border);
+      margin: 12px 0;
+    }
+    .info-row {
+      display: flex; justify-content: space-between;
+      align-items: baseline;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-key {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; color: var(--muted);
+      letter-spacing: 0.15em; text-transform: uppercase;
+    }
+    .info-val {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; color: var(--accent2);
+      font-weight: 700;
+    }
+    .info-desc {
+      font-size: 12px; font-weight: 300;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.65; margin-top: 10px;
+    }
+    #info-close {
+      position: absolute; top: 12px; right: 14px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; color: var(--muted);
+      cursor: pointer; letter-spacing: 0.1em;
+    }
+    #info-close:hover { color: var(--text); }
+
+    /* ---- BOTTOM CONTROLS ---- */
+    #bottom-bar {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .ctrl-btn {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; letter-spacing: 0.2em;
+      color: var(--muted); text-transform: uppercase;
+      background: rgba(4,12,28,0.8);
+      border: 1px solid var(--border);
+      padding: 8px 16px; border-radius: 2px;
+      cursor: pointer; transition: all 0.2s;
+      backdrop-filter: blur(12px);
+    }
+    .ctrl-btn:hover { color: var(--accent); border-color: rgba(0,200,255,0.35); }
+    .ctrl-btn.active { color: var(--accent); border-color: rgba(0,200,255,0.4); background: rgba(0,80,160,0.15); }
+    #expand-all-btn.all-expanded { color: var(--warn); border-color: rgba(255,107,53,0.4); }
+
+    /* ---- CONTROLS HINT ---- */
+    #controls-hint {
+      position: fixed; bottom: 72px; left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; letter-spacing: 0.25em;
+      color: var(--muted); text-transform: uppercase;
+      text-align: center; z-index: 100;
+      opacity: 1; transition: opacity 1s;
+    }
+
+    /* ---- LOADING ---- */
+    #loader {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 999;
+      transition: opacity 0.8s;
+    }
+    #loader.hidden { opacity: 0; pointer-events: none; }
+    .loader-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 64px; letter-spacing: 0.1em;
+      color: #fff; margin-bottom: 8px;
+    }
+    .loader-logo span { color: var(--accent); }
+    .loader-sub {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; letter-spacing: 0.4em;
+      color: var(--muted); text-transform: uppercase;
+      margin-bottom: 48px;
+    }
+    .loader-bar-wrap {
+      width: 240px; height: 2px;
+      background: rgba(255,255,255,0.06);
+    }
+    .loader-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 0.1s;
+      box-shadow: 0 0 12px var(--accent);
+    }
+    .loader-pct {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; color: var(--muted);
+      margin-top: 10px; letter-spacing: 0.2em;
+    }
+
+    /* ---- CROSSHAIR CURSOR ---- */
+    .has-target { cursor: crosshair; }
+  </style>
+</head>
+<body>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="loader-logo">WATER<span>·IQ</span></div>
+  <div class="loader-sub">Initialising 3D Treatment System</div>
+  <div class="loader-bar-wrap"><div class="loader-bar" id="lbar"></div></div>
+  <div class="loader-pct" id="lpct">0%</div>
+</div>
+
+<!-- Canvas -->
+<div id="canvas-container"></div>
+
+<!-- Top bar -->
+<div id="topbar">
+  <div class="logo-text">WATER<span>·IQ</span></div>
+  <div class="topbar-center">Sono-Electrocoagulation Greywater Treatment · RIT Bengaluru</div>
+  <div class="topbar-right">
+    <div class="tag">3D Interactive</div>
+    <div class="tag">2,500 L/day</div>
+  </div>
+</div>
+
+<!-- Left stage panel -->
+<div id="stage-panel">
+  <div class="stage-btn" data-stage="0" onclick="toggleStage(0)">
+    <div class="snum">S0 — PRETREATMENT</div>
+    <div class="sname">Sonication Chamber</div>
+    <div class="sdesc">40 kHz · 50–100 W/L</div>
+    <div class="expand-indicator">+</div>
+  </div>
+  <div class="stage-btn" data-stage="1" onclick="toggleStage(1)">
+    <div class="snum">S1 — FLOW CONTROL</div>
+    <div class="sname">Propeller Zone</div>
+    <div class="sdesc">Low RPM · Distribution</div>
+    <div class="expand-indicator">+</div>
+  </div>
+  <div class="stage-btn" data-stage="2" onclick="toggleStage(2)">
+    <div class="snum">S2 — PRIMARY TREATMENT</div>
+    <div class="sname">Electrocoagulation</div>
+    <div class="sdesc">6 Al discs · 12V DC · Floc</div>
+    <div class="expand-indicator">+</div>
+  </div>
+  <div class="stage-btn" data-stage="3" onclick="toggleStage(3)">
+    <div class="snum">S3 — TIMING</div>
+    <div class="sname">Timed Gate</div>
+    <div class="sdesc">Servo · 15 min hold</div>
+    <div class="expand-indicator">+</div>
+  </div>
+  <div class="stage-btn" data-stage="4" onclick="toggleStage(4)">
+    <div class="snum">S4 — SENSING</div>
+    <div class="sname">Sensor Pod</div>
+    <div class="sdesc">Turbidity · pH · TDS · ESP32</div>
+    <div class="expand-indicator">+</div>
+  </div>
+  <div class="stage-btn" data-stage="5" onclick="toggleStage(5)">
+    <div class="snum">S5 — SETTLING</div>
+    <div class="sname">Lamella Section</div>
+    <div class="sdesc">V-settler · 45/10/45%</div>
+    <div class="expand-indicator">+</div>
+  </div>
+  <div class="stage-btn" data-stage="6" onclick="toggleStage(6)">
+    <div class="snum">S6 — OUTPUT</div>
+    <div class="sname">Collection Zone</div>
+    <div class="sdesc">Clean / Sludge separation</div>
+    <div class="expand-indicator">+</div>
+  </div>
+</div>
+
+<!-- Right info panel -->
+<div id="info-panel">
+  <div id="info-close" onclick="closeInfo()">✕ CLOSE</div>
+  <div class="info-tag" id="ip-tag">Stage</div>
+  <div class="info-title" id="ip-title">Title</div>
+  <div class="info-divider"></div>
+  <div id="ip-rows"></div>
+  <div class="info-desc" id="ip-desc"></div>
+</div>
+
+<!-- Bottom controls -->
+<div id="bottom-bar">
+  <button class="ctrl-btn" onclick="resetCamera()">⌖ RESET VIEW</button>
+  <button class="ctrl-btn" id="expand-all-btn" onclick="toggleExpandAll()">⊞ EXPAND ALL</button>
+  <button class="ctrl-btn active" id="particles-btn" onclick="toggleParticles()">◎ PARTICLES ON</button>
+  <button class="ctrl-btn" onclick="toggleWireframe()">⬡ WIREFRAME</button>
+  <button class="ctrl-btn" id="flow-btn" onclick="toggleFlow()">▶ FLOW ANIM</button>
+</div>
+
+<div id="controls-hint">
+  LEFT DRAG — ORBIT &nbsp;·&nbsp; RIGHT DRAG — PAN &nbsp;·&nbsp; SCROLL — ZOOM &nbsp;·&nbsp; CLICK STAGE — EXPAND
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js"
+  }
+}
+</script>
+<script type="module" src="main.js"></script>
+</body>
+</html>
